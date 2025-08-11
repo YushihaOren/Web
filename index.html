@@ -136,7 +136,7 @@ function renderKey(key, createdAt, expireAt) {
 
   if (!key || now > expireAt) {
     key = generateKey(32);
-    expireAt = now + 60 * 60 * 1000; // +1h
+    expireAt = now + 24 * 60 * 60 * 1000;
     localStorage.setItem(storageKey, key);
     localStorage.setItem(storageExpire, expireAt);
     localStorage.setItem(storageIP, ip);
@@ -153,4 +153,5 @@ function renderKey(key, createdAt, expireAt) {
 </script>
 </body>
 </html>
+
 
