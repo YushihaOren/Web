@@ -4,20 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Key Hôm Nay</title>
-  <link rel="icon" href="https://i.imgur.com/WVEdeiz.jpeg">
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: "Segoe UI", sans-serif;
+    body {
+      font-family: Arial, sans-serif;
       background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #fbc2eb, #a6c1ee);
       background-size: 400% 400%;
       animation: gradient 15s ease infinite;
       display: flex;
       justify-content: center;
       align-items: center;
+      height: 100vh;
+      margin: 0;
       color: #333;
     }
     @keyframes gradient {
@@ -26,13 +23,13 @@
       100% {background-position: 0% 50%;}
     }
     .card {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 30px 40px;
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
       border-radius: 14px;
       box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-      width: 90%;
-      max-width: 400px;
       text-align: center;
+      max-width: 400px;
+      width: 90%;
     }
     .title {
       font-size: 26px;
@@ -66,54 +63,78 @@
 </head>
 <body>
   <div class="card">
-    <img src="https://i.imgur.com/WVEdeiz.jpeg" class="icon-face" style="width:80px;height:80px;border-radius:50%;">
     <div class="title">🔑 Key của bạn</div>
     <div id="keyContent"></div>
   </div>
 
   <script>
+    async function getUserIP() {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const data = await res.json();
+        return data.ip || "unknown";
+      } catch {
+        return "unknown";
+      }
+    }
+
+    function generateKey(length) {
+      const chars = 'abcdef0123456789';
+      let key = '';
+      for (let i = 0; i < length; i++) {
+        key += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return key;
+    }
+
+    function renderKey(key, createdAt, expireAt) {
+      const keyContent = document.getElementById('keyContent');
+      keyContent.innerHTML = `
+        <div class="key-box" id="keyBox">${key}</div>
+        <button class="btn" onclick="copyKey()">📋 Copy Key</button>
+        <div id="countdown" class="countdown"></div>
+        <p class="note">Tạo lúc: ${new Date(createdAt).toLocaleString()}</p>
+        <p class="note">Hết hạn: ${new Date(expireAt).toLocaleString()}</p>
+      `;
+
+      const countdownEl = document.getElementById('countdown');
+      setInterval(() => {
+        const now = Date.now();
+        const distance = expireAt - now;
+        if (distance <= 0) {
+          countdownEl.innerText = "⛔ Đã hết hạn!";
+          return;
+        }
+        const h = Math.floor(distance / (1000 * 60 * 60));
+        const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((distance % (1000 * 60)) / 1000);
+        countdownEl.innerText = `⌛ Còn lại: ${h}h ${m}m ${s}s`;
+      }, 1000);
+    }
+
     function copyKey() {
       const key = document.getElementById("keyBox").innerText;
       navigator.clipboard.writeText(key).then(() => alert("Đã copy key!"));
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let key = urlParams.get('key');
-    const keyContent = document.getElementById('keyContent');
+    (async () => {
+      const ip = await getUserIP();
+      const storageKey = `user_key_${ip}`;
+      const storageExpire = `key_expire_${ip}`;
 
-    if (!key) {
-      // Nếu không có key thì tự tạo key random
-      const chars = 'abcdef0123456789';
-      key = '';
-      for (let i = 0; i < 32; i++) {
-        key += chars[Math.floor(Math.random() * chars.length)];
+      let key = localStorage.getItem(storageKey);
+      let expireAt = parseInt(localStorage.getItem(storageExpire)) || 0;
+      const now = Date.now();
+
+      if (!key || now > expireAt) {
+        key = generateKey(32);
+        expireAt = now + 60 * 60 * 1000; // +1h
+        localStorage.setItem(storageKey, key);
+        localStorage.setItem(storageExpire, expireAt);
       }
-    }
 
-    const createdAt = new Date();
-    const expireAt = new Date(createdAt.getTime() + 60 * 60 * 1000); // +1h
-
-    keyContent.innerHTML = `
-      <div class="key-box" id="keyBox">${key}</div>
-      <button class="btn" onclick="copyKey()">📋 Copy Key</button>
-      <div id="countdown" class="countdown"></div>
-      <p class="note">Tạo lúc: ${createdAt.toLocaleString()}</p>
-      <p class="note">Hết hạn: ${expireAt.toLocaleString()}</p>
-    `;
-
-    const countdownEl = document.getElementById('countdown');
-    setInterval(() => {
-      const now = new Date().getTime();
-      const distance = expireAt - now;
-      if (distance <= 0) {
-        countdownEl.innerText = "⛔ Đã hết hạn!";
-        return;
-      }
-      const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const s = Math.floor((distance % (1000 * 60)) / 1000);
-      countdownEl.innerText = `⌛ Còn lại: ${h}h ${m}m ${s}s`;
-    }, 1000);
+      renderKey(key, now, expireAt);
+    })();
   </script>
 </body>
 </html>
